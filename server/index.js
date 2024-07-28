@@ -74,9 +74,11 @@ io.on("connection", async(socket) => {
 
 app.use(logger("dev"))
 
+app.use(express.static(path.join(__dirname, '..', 'client')));
+
 app.get("/", (req, res) => {
-    res.sendFile(process.cwd() + "/client/index.html")
-})
+    res.sendFile(path.join(__dirname, '..', 'client', 'index.html'));
+});
 
 server.listen(port, () => {
     console.log(`Server running on port ${port}`)
