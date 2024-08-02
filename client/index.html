@@ -6,7 +6,7 @@
     <title>ChatSockets</title>
     <script type="module">
       import {io} from "https://cdn.socket.io/4.7.5/socket.io.esm.min.js"
- 
+
       const getUsername = async() => {
         const username = localStorage.getItem("username")
         if(username) {
@@ -18,8 +18,8 @@
 
         const { username: randomUsername } = await res.json()
 
-        localStorage.setItem("username", randomUsername)
-        return randomUsername
+        localStorage.setItem("username", randomUsername.split(".").join(" "))
+        return randomUsername.split(".").join(" ")
       }
 
       const socket = io({
@@ -138,9 +138,14 @@
         #screen {
             width: 900px;
             height: 100%;
-            background-color: #09f;
             overflow: hidden;
             position: relative;
+        }
+
+
+        #img {
+             height: 100%;
+             width: 100%;
         }
 
         .flex {
@@ -154,7 +159,7 @@
 <body>
     <div class="flex">
     <section id="screen">
-
+<img src="https://res.cloudinary.com/dapq4icmj/image/upload/v1722564383/rixyjyacxki6wqcgsnal.jpg" alt="streamImg" id="img">
     </section>
     <section id="chat">
         <ul id="messages"></ul>
