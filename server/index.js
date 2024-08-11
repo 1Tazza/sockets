@@ -6,12 +6,19 @@ dotenv.config()
 
 import { Server } from "socket.io"
 import {createServer} from "node:http"
+import { hashPassword } from "./config/hashFunction.js"
 
 const port = process.env.PORT ?? 3000
 
 
 const app = express()
+
+app.use(express.urlencoded({ extended: true }));
+
+app.use(express.json());
+
 const server = createServer(app)
+
 const io = new Server(server, {
     connectionStateRecovery:{}
 })
@@ -26,6 +33,15 @@ await db.execute(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     content TEXT,
     user TEXT
+ )
+`)
+
+await db.execute(`
+ CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT,
+  email TEXT,
+  password TEXT
  )
 `)
 
@@ -72,12 +88,42 @@ io.on("connection", async(socket) => {
     }
 })
 
+const isAuthenticated = (req, res, next) => {
+    const userIsAuthenticated = false; 
+    if (userIsAuthenticated) {
+      return next();
+    }
+    res.redirect('/register');
+  };
+
 app.use(logger("dev"))
 
-app.get("/", (req, res) => {
+app.get('/register', (req, res) => {
+    res.sendFile(process.cwd() + '/client/register.html'); 
+  });
+
+app.post('/register', async (req, res) => {
+  const { username, email } = req.body;
+  const password = await hashPassword(req.body.password)
+  try {
+    await db.execute({
+      sql: "INSERT INTO users (username, email, password) VALUES(:username, :email, :password)",
+      args: { username, email, password }
+    });
+    res.redirect('/'); // Redirige al usuario después de registrarse
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Error al registrar el usuario");
+  }
+});
+  
+
+app.get("/", isAuthenticated, (req, res) => {
     res.sendFile(process.cwd() + "/client/index.html")
 })
 
 server.listen(port, () => {
     console.log(`Server running on port ${port}`)
 })
+
+////
