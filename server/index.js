@@ -4,6 +4,8 @@ import dotenv from "dotenv"
 import {createClient} from "@libsql/client"
 dotenv.config()
 
+import bcrypt from "bcrypt"
+import session from "express-session"
 import { Server } from "socket.io"
 import {createServer} from "node:http"
 import { hashPassword } from "./config/hashFunction.js"
@@ -89,14 +91,25 @@ io.on("connection", async(socket) => {
 })
 
 const isAuthenticated = (req, res, next) => {
-    const userIsAuthenticated = false; 
-    if (userIsAuthenticated) {
+    if (req.session.isAuthenticated) {
       return next();
     }
     res.redirect('/register');
   };
 
+
+
+
+
 app.use(logger("dev"))
+
+app.use(session({
+  secret: 'secret_key',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false } 
+}));
+
 
 app.get('/register', (req, res) => {
     res.sendFile(process.cwd() + '/client/register.html'); 
@@ -105,12 +118,45 @@ app.get('/register', (req, res) => {
 app.post('/register', async (req, res) => {
   const { username, email } = req.body;
   const password = await hashPassword(req.body.password)
+  console.log(req.body)
   try {
     await db.execute({
       sql: "INSERT INTO users (username, email, password) VALUES(:username, :email, :password)",
       args: { username, email, password }
     });
     res.redirect('/'); // Redirige al usuario después de registrarse
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Error al registrar el usuario");
+  }
+});
+
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  console.log("estamos en GET",req.body)
+  try {
+    const findUser = await db.execute({
+      sql: "SELECT * FROM users WHERE email = :email",
+      args: {email}
+    })
+
+    const user = findUser.rows[0]
+    console.log("user",user)
+    
+    if(!user) {res.status(404).send("Usuario no encontrado")}
+    
+    const result = await bcrypt.compare(password, user.password)
+
+    if (result) {
+      
+      req.session.userId = user.id
+      req.session.isAuthenticated = true
+
+      res.redirect('/'); // Redirige al usuario si las contraseñas coinciden
+    } else {
+      res.redirect('/login?error=incorrect-password');
+    }
+
   } catch (e) {
     console.error(e);
     res.status(500).send("Error al registrar el usuario");
