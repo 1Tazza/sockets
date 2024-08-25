@@ -49,7 +49,7 @@ await db.execute(`
 
 io.on("connection", async(socket) => {
     console.log("a user has connected!")
-
+   
     socket.on("disconnect", () => {
         console.log("an user has disconnected")
     })
@@ -57,8 +57,8 @@ io.on("connection", async(socket) => {
     socket.on("chat message", async(msg) => {
         let result
         const username = socket.handshake.auth.username ?? "anonymous"
-
-        console.log({username})
+       
+        console.log("aca",username)
         try{
           result = await db.execute({
             sql: "INSERT INTO messages (content, user) VALUES(:msg, :username)",
@@ -72,7 +72,7 @@ io.on("connection", async(socket) => {
         io.emit("chat message", msg, result.lastInsertRowid.toString(), username)
     })
 
-    console.log(socket.handshake.auth)
+    console.log("socket.auth",socket.handshake.auth)
 
     if(!socket.recovered) {
         try {
@@ -141,7 +141,7 @@ app.post('/login', async (req, res) => {
     })
 
     const user = findUser.rows[0]
-    console.log("user",user)
+    console.log("user1",user)
     
     if(!user) {res.status(404).send("Usuario no encontrado")}
     
@@ -150,11 +150,12 @@ app.post('/login', async (req, res) => {
     if (result) {
       
       req.session.userId = user.id
+      req.session.username = user.username
       req.session.isAuthenticated = true
 
       res.redirect('/'); // Redirige al usuario si las contraseñas coinciden
     } else {
-      res.redirect('/login?error=incorrect-password');
+      res.redirect('/register?error=incorrect-password');
     }
 
   } catch (e) {
@@ -166,6 +167,15 @@ app.post('/login', async (req, res) => {
 
 app.get("/", isAuthenticated, (req, res) => {
     res.sendFile(process.cwd() + "/client/index.html")
+})
+
+app.get("/getUser", async (req,res) => {
+  try{
+    const username = req.session.username
+    console.log("getUser",username)
+    res.status(201).send({username: username})
+  }
+  catch (e){}
 })
 
 server.listen(port, () => {
